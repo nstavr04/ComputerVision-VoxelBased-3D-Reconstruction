@@ -14,7 +14,7 @@ def calculate_total_error(objpoints, imgpoints, rvecs, tvecs, mtx, dist):
 def draw_3D_axis(ret, mtx, dist, rvecs, tvecs, training_image):
     # Axis points in 3D space. We'll draw the axis lines from the origin to these points.
     # Increasing the numbers makes the lines longer
-    axis = np.float32([[0, 0, 0], [9, 0, 0], [0, 9, 0], [0, 0, -9]]).reshape(-1, 3)
+    axis = np.float32([[0, 0, 0], [540, 0, 0], [0, 540, 0], [0, 0, -540]]).reshape(-1, 3)
 
     img_with_axes = training_image.copy()
 
@@ -24,9 +24,9 @@ def draw_3D_axis(ret, mtx, dist, rvecs, tvecs, training_image):
 
     # Define the origin (chessboard corner in this case)
     origin = tuple(imgpts[0].ravel())
-    img_with_axes = cv2.line(img_with_axes, origin, tuple(imgpts[1].ravel()), (0, 0, 255), 5)  # X-Axis in red
-    img_with_axes = cv2.line(img_with_axes, origin, tuple(imgpts[2].ravel()), (0, 255, 0), 5)  # Y-Axis in green
-    img_with_axes = cv2.line(img_with_axes, origin, tuple(imgpts[3].ravel()), (255, 0, 0), 5)  # Z-Axis in blue
+    img_with_axes = cv2.line(img_with_axes, origin, tuple(imgpts[1].ravel()), (0, 0, 255), 2)  # X-Axis in red
+    img_with_axes = cv2.line(img_with_axes, origin, tuple(imgpts[2].ravel()), (0, 255, 0), 2)  # Y-Axis in green
+    img_with_axes = cv2.line(img_with_axes, origin, tuple(imgpts[3].ravel()), (255, 0, 0), 2)  # Z-Axis in blue
 
     cv2.imshow('Image_with_axes', img_with_axes)
     cv2.waitKey(0)
@@ -305,17 +305,15 @@ def main():
     cv2.waitKey(0)
 
     testing_img = []
-    testing_img.append(testing_image)
+    testing_img.append(testing_image.copy())
 
     _, imgpoints_test, _ = calibrate_camera(testing_img, square_size)
-
-    print("imgpoints_test: ")
-    print(imgpoints_test.shape())
+    imgpoints_test_reshaped = imgpoints_test[0].reshape(-1, 2)
 
     objp = np.zeros((6*8, 3), np.float32)
     objp[:, :2] = np.mgrid[0:8, 0:6].T.reshape(-1, 2) * square_size 
 
-    ret, rvecs_test, tvecs_test = cv2.solvePnP(objp, imgpoints_test, mtx, dist)
+    ret, rvecs_test, tvecs_test = cv2.solvePnP(objp, imgpoints_test_reshaped, mtx, dist)
 
     R, _ = cv2.Rodrigues(rvecs_test)
 
