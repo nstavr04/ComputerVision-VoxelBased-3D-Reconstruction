@@ -182,10 +182,12 @@ def calibrate_camera(images, square_size):
             cv2.drawChessboardCorners(img, (8,6), corners2, ret)
             cv2.imshow('img', img)
             # Wait for key press
-            cv2.waitKey(0)
+            cv2.waitKey(0) == ord(' ')
 
             # If the automatic calibration is not good, we can do manual calibration
             if cv2.waitKey(0) == ord('N'):
+                print("Automatic calibration not good. Proceeding with manual calibration...")
+                
                 manual_points = manual_calibrate(processed_img, square_size)
 
                 objpoints.pop()
@@ -260,6 +262,7 @@ def main():
     # Read the first image to get its height and width
     img = images[0]
 
+    # Img dimentions 644x486
     height, width = img.shape[:2]
     print("Image dimensions: {}x{}".format(width, height))
 
