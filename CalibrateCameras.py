@@ -176,13 +176,12 @@ def calibrate_camera(images, square_size):
         if ret == True:
             print("Found the corners in the image. Proceeding with automatic calibration...")
 
-            objpoints.append(objp)
-
             # Refines the corner positions - findChessboardCorners uses this function,
             # but we can use it with different parameters to get better results
-            corners2 = cv2.cornerSubPix(processed_img, corners, (20,20), (-1,-1), criteria)
+            corners2 = cv2.cornerSubPix(processed_img, corners, (20,20), (-1,-1), criteria)   
 
-            imgpoints.append(corners2)
+            objpoints.append(objp)
+            imgpoints.append(corners2)         
 
             # Draw and display the corners
             cv2.drawChessboardCorners(img, (8,6), corners2, ret)
@@ -195,6 +194,9 @@ def calibrate_camera(images, square_size):
                 print("Automatic calibration not good. Proceeding with manual calibration...")
 
                 manual_points = manual_calibrate(initial_img, square_size)
+
+                if manual_points is None:
+                    continue
 
                 objpoints.pop()
                 imgpoints.pop()
@@ -299,13 +301,18 @@ def main():
     images = extract_frames(testing_image_path, interval=1)
 
     testing_image = images[0]
+    cv2.imshow("Testing image", testing_image)
+    cv2.waitKey(0)
 
-    ret, imgpoints_test = cv2.findChessboardCorners(testing_image, (8,6), None)
+    _, imgpoints_test, _ = calibrate_camera(testing_img, square_size)
+
+    print("imgpoints_test: ")
+    print(imgpoints_test.shape())
 
     objp = np.zeros((6*8, 3), np.float32)
     objp[:, :2] = np.mgrid[0:8, 0:6].T.reshape(-1, 2) * square_size 
 
-    ret, rvecs_test, tvecs_test = cv2.solvePnP(objp, imgpoints_test, mtx, dist, useExtrinsicGuess=False, flags = cv2.SOLVEPNP_ITERATIVE  )
+    ret, rvecs_test, tvecs_test = cv2.solvePnP(objp, imgpoints_test, mtx, dist)
 
     R, _ = cv2.Rodrigues(rvecs_test)
 
