@@ -6,3 +6,9 @@
           4     2      1        
 
 Camera numbers above
+
+
+For Task 1 - Camera calibration:
+Space - Proceed
+Q - Discard image
+N - Go from automatic to manual calibration

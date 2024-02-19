@@ -111,7 +111,11 @@ def manual_calibrate(img, square_size):
     cv2.imshow("img", img)
     original_image = img
     cv2.setMouseCallback("img", click_event, img)
-    cv2.waitKey(0)
+    cv2.waitKey(0) == ord(' ')
+
+    # For images that are partially out of frame
+    if(cv2.waitKey(0) == ord('q')):
+        return None
 
     while len(corner_points) < 4:
         print("You did not select the 4 corners. Please try again.")
@@ -165,7 +169,7 @@ def calibrate_camera(images, square_size):
 
         # Find the chess board corners
         ret, corners = cv2.findChessboardCorners(processed_img, (8,6), None)
-
+        
         # If found, add object points, image points
         if ret == True:
             print("Found the corners in the image. Proceeding with automatic calibration...")
@@ -206,8 +210,12 @@ def calibrate_camera(images, square_size):
         # If we didn't find the corners, we will do manual calibration
         else:
             print("Could not find the corners in the image. Proceeding with manual calibration...")
-            
+
             corners = manual_calibrate(img, square_size)
+            
+            if corners is None:
+                continue
+
             objpoints.append(objp)
             imgpoints.append(corners)
 
@@ -216,7 +224,7 @@ def calibrate_camera(images, square_size):
             # Draw and display the corners
             cv2.drawChessboardCorners(img, (8,6), corners, ret)
             cv2.imshow('img', img)
-            cv2.waitKey(0)
+            cv2.waitKey(0) == ord(' ')
 
     cv2.destroyAllWindows()
 
