@@ -304,6 +304,9 @@ def main():
     cv2.imshow("Testing image", testing_image)
     cv2.waitKey(0)
 
+    testing_img = []
+    testing_img.append(testing_image)
+
     _, imgpoints_test, _ = calibrate_camera(testing_img, square_size)
 
     print("imgpoints_test: ")
