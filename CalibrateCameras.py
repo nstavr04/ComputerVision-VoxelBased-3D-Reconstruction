@@ -261,7 +261,6 @@ def extract_frames(video_path, interval=2):
 
 def main():
 
-    # Probably 11.5
     square_size = 115
     checkerboardWidth = 8
     checkerboardHeight = 6
