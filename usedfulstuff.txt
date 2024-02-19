@@ -12,3 +12,5 @@ For Task 1 - Camera calibration:
 Space - Proceed
 Q - Discard image
 N - Go from automatic to manual calibration
+
+If Image doesn't zoom, press space once

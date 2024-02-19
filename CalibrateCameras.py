@@ -101,7 +101,7 @@ def interpolate_board_points_homography(top_left, top_right, bottom_left, bottom
     return image_pts
 
 def manual_calibrate(img, square_size):
-    
+
     # Setting corner_points as global because I cannot pass parameters to the click_event function
     global corner_points, original_image
 
@@ -110,12 +110,13 @@ def manual_calibrate(img, square_size):
 
     cv2.imshow("img", img)
     original_image = img
-    cv2.setMouseCallback("img", click_event, img)
-    cv2.waitKey(0) == ord(' ')
 
     # For images that are partially out of frame
     if(cv2.waitKey(0) == ord('q')):
         return None
+
+    cv2.setMouseCallback("img", click_event, img)
+    # cv2.waitKey(0)
 
     while len(corner_points) < 4:
         print("You did not select the 4 corners. Please try again.")
@@ -159,7 +160,8 @@ def calibrate_camera(images, square_size):
 
         # We make the image grayscale, apply GaussianBlur and then CLAHE to help with the automatic corner detection
         # Overall, it lowers the total error of the calibration
-        
+        initial_img = img.copy()
+
         processed_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         processed_img = cv2.GaussianBlur(processed_img, (5, 5), 0)
         clahe = cv2.createCLAHE(clipLimit=1, tileGridSize=(6, 8))
@@ -186,13 +188,13 @@ def calibrate_camera(images, square_size):
             cv2.drawChessboardCorners(img, (8,6), corners2, ret)
             cv2.imshow('img', img)
             # Wait for key press
-            cv2.waitKey(0) == ord(' ')
+            # cv2.waitKey(0)
 
             # If the automatic calibration is not good, we can do manual calibration
-            if cv2.waitKey(0) == ord('N'):
+            if cv2.waitKey(0) == ord('n'):
                 print("Automatic calibration not good. Proceeding with manual calibration...")
-                
-                manual_points = manual_calibrate(processed_img, square_size)
+
+                manual_points = manual_calibrate(initial_img, square_size)
 
                 objpoints.pop()
                 imgpoints.pop()
@@ -201,18 +203,17 @@ def calibrate_camera(images, square_size):
                 imgpoints.append(manual_points)
 
                 # Draw and display the corners
-                cv2.drawChessboardCorners(img, (8,6), manual_points, ret)
-                cv2.imshow('img', img)
+                cv2.drawChessboardCorners(initial_img, (8,6), manual_points, ret)
+                cv2.imshow('img', initial_img)
                 # Wait for key press
                 cv2.waitKey(0)
-
         
         # If we didn't find the corners, we will do manual calibration
         else:
             print("Could not find the corners in the image. Proceeding with manual calibration...")
 
             corners = manual_calibrate(img, square_size)
-            
+
             if corners is None:
                 continue
 
@@ -224,7 +225,7 @@ def calibrate_camera(images, square_size):
             # Draw and display the corners
             cv2.drawChessboardCorners(img, (8,6), corners, ret)
             cv2.imshow('img', img)
-            cv2.waitKey(0) == ord(' ')
+            cv2.waitKey(0)
 
     cv2.destroyAllWindows()
 
@@ -258,6 +259,7 @@ def extract_frames(video_path, interval=2):
 
 def main():
 
+    # Probably 11.5
     square_size = 115
     checkerboardWidth = 8
     checkerboardHeight = 6
@@ -294,7 +296,7 @@ def main():
 
     # # !!!!!!!! CHANGE ACCORDINGLY TO THE TEST IMAGE YOU WANT TO USE !!!!!!!!
     testing_image_path = 'data/cam1/checkerboard.avi'
-    images = extract_frames(video_path, interval=1)
+    images = extract_frames(testing_image_path, interval=1)
 
     testing_image = images[0]
 
