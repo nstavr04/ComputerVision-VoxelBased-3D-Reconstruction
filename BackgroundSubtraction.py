@@ -137,6 +137,15 @@ def process_video(video_path, background_model_gmm):
         # Combining the masks - example using logical AND to combine thresholds
         combined_mask = cv2.bitwise_and(mask_hue, cv2.bitwise_and(mask_sat, mask_val))
 
+        #kernel1 = np.ones((4, 4), np.uint8)
+        kernel2 = np.ones((6, 6), np.uint8)
+
+        # Erode and then dilate, known as opening. Good for removing noise.
+        # combined_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_OPEN, kernel1)
+
+        # Dilate and then erode, known as closing. Good for closing small holes.
+        combined_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_CLOSE, kernel2)
+
         # if is_first_frame:
         #     # Save the first frame for manual segmentation
         #     cv2.imwrite("data/cam4/combined_mask4.jpg", combined_mask)
@@ -178,7 +187,7 @@ def main():
     process_video_path4 = "data/cam4/video.avi"
     background_model_gmm4 = cv2.imread("data/cam4/background_model_gmm.jpg")
 
-    # process_video(process_video_path3, background_model_gmm3)
+    process_video(process_video_path1, background_model_gmm1)
 
     # Used to save the frame for extracting manual segmentation mask
     # save_first_frame()
