@@ -22,4 +22,14 @@
     -0.00089.
   </data>
 </DistortionCoeffs>
+<ExtrinsicCameraMatrix>
+  <rows>3</rows>
+  <cols>4</cols>
+  <dt>f</dt>
+  <data>
+    0.71. 0.70. 0.0095. 348.20.
+    0.11. 0.12. 0.99. 716.99.
+    -0.69. -0.70. 0.16. 474.25.
+  </data>
+</ExtrinsicCameraMatrix>
 </opencv_storage>
