@@ -265,10 +265,9 @@ def main():
     checkerboardWidth = 8
     checkerboardHeight = 6
 
-    video_path = 'data/cam1/intrinsics.avi'
+    video_path = 'data/cam2/intrinsics.avi'
     interval = 2  # Get a frame every 2 seconds
     images = extract_frames(video_path, interval)
-    print(images)
 
     # Read the first image to get its height and width
     img = images[0]
@@ -296,7 +295,7 @@ def main():
     # # get the rvecs and tvecs. We then use those to create the 3D axis and cube
 
     # # !!!!!!!! CHANGE ACCORDINGLY TO THE TEST IMAGE YOU WANT TO USE !!!!!!!!
-    testing_image_path = 'data/cam1/checkerboard.avi'
+    testing_image_path = 'data/cam2/checkerboard.avi'
     images = extract_frames(testing_image_path, interval=1)
 
     testing_image = images[0]

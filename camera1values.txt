@@ -4,8 +4,7 @@ Camera matrix:
  [  0.           0.           1.        ]]
 Distortion coefficients:
 [[-0.29679197  0.11274593 -0.00227559  0.00339306 -0.00089054]]
-Could not find the corners in the image. Proceeding with manual calibration...
-You did not select the 4 corners. Please try again.
+
 rvecs_test: 
 [[-1.32794506]
  [ 0.5537097 ]
