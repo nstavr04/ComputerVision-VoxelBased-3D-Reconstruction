@@ -42,4 +42,14 @@
             4742.51350976
         </data>
     </TranslationVectors>
+    <RotationMatrix type_id="opencv-matrix">
+        <rows>3</rows>
+        <cols>3</cols>
+        <dt>f</dt>
+        <data>
+            0.71161611 -0.70250478  0.00946311
+            0.10691586  0.12159531  0.98680473
+            -0.69438571 -0.70121439  0.16163808
+        </data>
+    </RotationMatrix>
 </opencv_storage>
