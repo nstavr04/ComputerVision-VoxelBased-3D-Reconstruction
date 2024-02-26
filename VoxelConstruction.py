@@ -32,7 +32,7 @@ def create_lookup_table(voxel_volume_bounds, resolution, camera_configs):
             # Project points returns the xim yim as floats so we round them to integers
             xim_int = int(round(xim))
             yim_int = int(round(yim))
-            lookup_table.append((*voxel, c, xim_int, yim_int))  # Append voxel coord, camera index, and img coord
+            lookup_table.append((*voxel, c, xim_int, yim_int))
 
     return lookup_table
 
@@ -47,33 +47,32 @@ def is_voxel_visible_in_camera(voxel_xim, voxel_yim, mask):
     # Check if the coordinates are within the mask bounds
     if 0 <= voxel_yim < mask.shape[0] and 0 <= voxel_xim < mask.shape[1]:
         # Return True if the pixel is foreground (white)
-        # Can just do == 255 but this is more robust
-        return mask[voxel_yim, voxel_xim] > 128
+        return mask[voxel_yim, voxel_xim] == 255
     return False
 
-# def perform_voxel_reconstruction(lookup_table, masks):
-#     reconstructed_voxels = []
+def perform_voxel_reconstruction(lookup_table, masks):
+    reconstructed_voxels = []
 
-#     for voxel in lookup_table:
-#         voxel_xim, voxel_yim = voxel[4:]  # Assuming the first 3 elements are the voxel coordinates
-#         visibility_count = 0
+    for voxel in lookup_table:
+        voxel_xim, voxel_yim = voxel[4:]  # Assuming the first 3 elements are the voxel coordinates
+        visibility_count = 0
         
-#         # Cam id and mask as a dictionary in case we want to use more than 1 frame of each camera in the future
-#         for cam_id, mask in masks.items():
-#             if is_voxel_visible_in_camera(voxel_xim, voxel_yim, mask):
-#                 visibility_count += 1
+        # Cam id and mask as a dictionary in case we want to use more than 1 frame of each camera in the future
+        for cam_id, mask in masks.items():
+            if is_voxel_visible_in_camera(voxel_xim, voxel_yim, mask):
+                visibility_count += 1
 
-#         # Mark the voxel as "on" if visible in at least 3 out of 4 cameras
-#         if visibility_count >= 3:
-#             reconstructed_voxels.append(voxel[:3])
+        # Mark the voxel as "on" if visible in at least 3 out of 4 cameras
+        if visibility_count >= 2:
+            reconstructed_voxels.append(voxel[:3])
 
-#     return reconstructed_voxels
+    return reconstructed_voxels
 
 def main():
     
-    world_width = 32
-    world_height = 8
-    world_depth = 32
+    world_width = 128
+    world_height = 64
+    world_depth = 128
     block_size = 1.0
     camera_configs = ["data/cam1/config.xml", "data/cam2/config.xml", "data/cam3/config.xml", "data/cam4/config.xml"]
 
@@ -89,22 +88,24 @@ def main():
 
     masks = load_foreground_masks()
 
-    print(len(voxel_lookup_table))
-    print(masks[1].shape)
-    print([item[-2:] for item in voxel_lookup_table[0:10]])
+    # print(len(voxel_lookup_table))
+    # print(masks[1].shape)
+    # print([item[-2:] for item in voxel_lookup_table[0:10]])
 
-    points_of_interest = [(10, 10), (20, 20), (300, 30)]  # Example points
+    # points_of_interest = [(10, 10), (20, 20), (300, 30)]  # Example points
 
-    for point in points_of_interest:
-        x, y = point
-        print(f"Value at ({x}, {y}):", masks[1][y, x])
+    # for point in points_of_interest:
+    #     x, y = point
+    #     print(f"Value at ({x}, {y}):", masks[1][y, x])
 
-    non_zero_pixels = np.nonzero(masks[1])
-    print('Non-zero pixel coordinates:', non_zero_pixels)
-    print('Number of non-zero pixels:', len(non_zero_pixels[0])) 
+    # non_zero_pixels = np.nonzero(masks[1])
+    # print('Non-zero pixel coordinates:', non_zero_pixels)
+    # print('Number of non-zero pixels:', len(non_zero_pixels[0])) 
 
-    # reconstructed_voxels = perform_voxel_reconstruction(voxel_lookup_table, masks)
+    reconstructed_voxels = perform_voxel_reconstruction(voxel_lookup_table, masks)
 
+    print("Number of reconstructed voxels:", len(reconstructed_voxels))
+    print("First 10 reconstructed voxels:", reconstructed_voxels[:10])
     
 
 if __name__ == "__main__":

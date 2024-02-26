@@ -59,7 +59,7 @@ def set_voxel_positions(width, height, depth):
 
     # Doing the voxel reconstruction here to save looping through the voxels twice
     for voxel in voxel_lookup_table:
-        voxel_xim, voxel_yim = voxel[4:]  # Assuming the first 3 elements are the voxel coordinates
+        voxel_xim, voxel_yim = voxel[4:]
         visibility_count = 0
         
         # Cam id and mask as a dictionary in case we want to use more than 1 frame of each camera in the future
@@ -68,9 +68,11 @@ def set_voxel_positions(width, height, depth):
                 visibility_count += 1
 
         # Mark the voxel as "on" if visible in at least 3 out of 4 cameras
-        if visibility_count >= 3:
-            data.append([voxel[4]*block_size - width/2, voxel[5]*block_size, voxel[6]*block_size - depth/2])
-            colors.append([voxel[4] / width, voxel[6] / depth, voxel[5] / height])
+        if visibility_count >= 2:
+            data.append([voxel[0]*block_size, voxel[1]*block_size, voxel[2]*block_size])
+            # data.append([voxel[0]*block_size - width/2, voxel[1]*block_size, voxel[2]*block_size - depth/2])
+            # colors.append([voxel[0] / width, voxel[2] / depth, voxel[1] / height])
+            colors.append([1.0, 1.0, 1.0])
 
     return data, colors
 
@@ -84,7 +86,7 @@ def get_cam_positions():
         translation_vector = load_translation_from_xml(config_path)
         position_vector = -np.matrix(rotation_matrix).T * np.matrix(translation_vector).T
 
-        cam_positions.append([position_vector[0][0], -position_vector[2][0], position_vector[1][0]])
+        cam_positions.append([position_vector[0], -position_vector[2], position_vector[1]])
 
     return cam_positions, [[1.0, 0, 0], [0, 1.0, 0], [0, 0, 1.0], [1.0, 1.0, 0]]
 
@@ -103,17 +105,36 @@ def get_cam_rotation_matrices():
 
     cam_rotations = []
     for config_path in camera_configs:
-        rotation_matrix = load_rotation_matrix_from_xml(config_path)
+        R_mat = load_rotation_matrix_from_xml(config_path)
         
         # Convert the numpy rotation matrix to a glm matrix
-        glm_rotation_matrix = glm.mat4(
-            rotation_matrix[0,0], rotation_matrix[0,1], rotation_matrix[0,2], 0,
-            rotation_matrix[1,0], rotation_matrix[1,1], rotation_matrix[1,2], 0,
-            rotation_matrix[2,0], rotation_matrix[2,1], rotation_matrix[2,2], 0,
-            0, 0, 0, 1
-        )
+    #     glm_rotation_matrix = glm.mat4(
+    #         rotation_matrix[0,0], rotation_matrix[0,1], rotation_matrix[0,2], 0,
+    #         rotation_matrix[1,0], rotation_matrix[1,1], rotation_matrix[1,2], 0,
+    #         rotation_matrix[2,0], rotation_matrix[2,1], rotation_matrix[2,2], 0,
+    #         0, 0, 0, 1
+    #     )
         
-        cam_rotations.append(glm_rotation_matrix)
+    #     cam_rotations.append(glm_rotation_matrix)
     
+    # return cam_rotations
+        
+     # Convert to OpenGL coordinate system
+        R_mat_gl = R_mat[:, [0, 2, 1]]
+        R_mat_gl[1, :] *= -1  # Invert the y-axis for OpenGL's coordinate system
+        
+        # Create a 4x4 OpenGL-compatible rotation matrix
+        gl_rot_mat = np.eye(4)
+        gl_rot_mat[:3, :3] = R_mat_gl
+
+        # Convert to glm matrix for further transformations if necessary
+        gl_rot_mat_glm = glm.mat4(*gl_rot_mat.T.ravel())
+        
+        # Adjust for any additional rotation as necessary
+        rotation_matrix_y = glm.rotate(glm.mat4(1), glm.radians(-90), glm.vec3(0, 1, 0))
+        cam_rotation = gl_rot_mat_glm * rotation_matrix_y
+        
+        cam_rotations.append(cam_rotation)
+        
     return cam_rotations
 
