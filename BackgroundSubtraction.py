@@ -151,6 +151,11 @@ def process_video(video_path, background_model_gmm):
         #     cv2.imwrite("data/cam4/combined_mask4.jpg", combined_mask)
         #     is_first_frame = False
 
+        if is_first_frame:
+            # Save the frame for use in voxel construction
+            cv2.imwrite("data/cam3/voxel_construction_frame.jpg", combined_mask) 
+            is_first_frame = False
+
         # Display or process the combined_mask as needed
         cv2.imshow('Foreground Mask', combined_mask)
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -187,7 +192,7 @@ def main():
     process_video_path4 = "data/cam4/video.avi"
     background_model_gmm4 = cv2.imread("data/cam4/background_model_gmm.jpg")
 
-    process_video(process_video_path1, background_model_gmm1)
+    process_video(process_video_path3, background_model_gmm3)
 
     # Used to save the frame for extracting manual segmentation mask
     # save_first_frame()

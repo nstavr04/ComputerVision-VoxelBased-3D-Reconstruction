@@ -2,8 +2,17 @@ import glm
 import random
 import numpy as np
 import xml.etree.ElementTree as ET
+import cv2
+import VoxelConstruction as vc
 
 block_size = 1.0
+
+camera_configs = [
+        "data/cam1/config.xml",
+        "data/cam2/config.xml",
+        "data/cam3/config.xml",
+        "data/cam4/config.xml"
+    ]
 
 def load_rotation_matrix_from_xml(config_path):
     # Parse the XML to get the rotation matrix
@@ -35,49 +44,45 @@ def generate_grid(width, depth):
 
 
 def set_voxel_positions(width, height, depth):
-    # Generates random voxel locations
-    # TODO: You need to calculate proper voxel arrays instead of random ones.
-    data, colors = [], []
-    for x in range(width):
-        for y in range(height):
-            for z in range(depth):
-                if random.randint(0, 1000) < 5:
-                    data.append([x*block_size - width/2, y*block_size, z*block_size - depth/2])
-                    colors.append([x / width, z / depth, y / height])
-    return data, colors
 
+    voxel_volume_bounds = [
+    (-width/2 * block_size, width/2 * block_size),  # X-axis bounds
+    (-block_size, height * block_size),  # Y-axis bounds
+    (-depth/2 * block_size, depth/2 * block_size)  # Z-axis bounds
+    ]
+    resolution = 1
+
+    voxel_lookup_table = vc.create_lookup_table(voxel_volume_bounds, resolution, camera_configs)
+    masks = vc.load_foreground_masks()
+
+    reconstructed_voxels = vc.perform_voxel_reconstruction(voxel_lookup_table, masks)
+
+    data, colors = [], []
+    for voxel in reconstructed_voxels:
+        x, y, z = voxel
+        data.append([x*block_size - width/2, y*block_size, z*block_size - depth/2])
+        colors.append([x / width, z / depth, y / height])
+    return data, colors
 
 def get_cam_positions():
     # Generates dummy camera locations at the 4 corners of the room
     # TODO: You need to input the estimated locations of the 4 cameras in the world coordinates.
     
-    # return [[-64 * block_size, 64 * block_size, 63 * block_size],
-    #         [63 * block_size, 64 * block_size, 63 * block_size],
-    #         [63 * block_size, 64 * block_size, -64 * block_size],
-    #         [-64 * block_size, 64 * block_size, -64 * block_size]], \
-    #     [[1.0, 0, 0], [0, 1.0, 0], [0, 0, 1.0], [1.0, 1.0, 0]]
+    cam_positions = []
+    for config_path in camera_configs:
+        rotation_matrix = load_rotation_matrix_from_xml(config_path)
+        translation_vector = load_translation_from_xml(config_path)
+        position_vector = -np.matrix(rotation_matrix).T * np.matrix(translation_vector).T
 
-    # Kinda like this but needs fixing
-    return [
-        [-63 * block_size, 64 * block_size, 0],
-        [0, 64 * block_size, 0],
-        [63 * block_size, 64 * block_size, -63 * block_size],
-        [63 * block_size, 64 * block_size, 0]
-    ], [
-        [1.0, 0, 0], [0, 1.0, 0], [0, 0, 1.0], [1.0, 1.0, 0]
-    ]
+        cam_positions.append([position_vector[0][0], -position_vector[2][0], position_vector[1][0]])
+
+    return cam_positions, [[1.0, 0, 0], [0, 1.0, 0], [0, 0, 1.0], [1.0, 1.0, 0]]
 
 def get_cam_rotation_matrices():
     # Generates dummy camera rotation matrices, looking down 45 degrees towards the center of the room
     # TODO: You need to input the estimated camera rotation matrices (4x4) of the 4 cameras in the world coordinates.
 
-    camera_configs = [
-        "data/cam1/config.xml",
-        "data/cam2/config.xml",
-        "data/cam3/config.xml",
-        "data/cam4/config.xml"
-    ]
-
+   
     # cam_angles = [[0, 45, -45], [0, 135, -45], [0, 225, -45], [0, 315, -45]]
     # cam_rotations = [glm.mat4(1), glm.mat4(1), glm.mat4(1), glm.mat4(1)]
     # for c in range(len(cam_rotations)):
