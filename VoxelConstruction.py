@@ -51,23 +51,23 @@ def is_voxel_visible_in_camera(voxel_xim, voxel_yim, mask):
         return mask[voxel_yim, voxel_xim] > 128
     return False
 
-def perform_voxel_reconstruction(lookup_table, masks):
-    reconstructed_voxels = []
+# def perform_voxel_reconstruction(lookup_table, masks):
+#     reconstructed_voxels = []
 
-    for voxel in lookup_table:
-        voxel_xim, voxel_yim = voxel[4:]  # Assuming the first 3 elements are the voxel coordinates
-        visibility_count = 0
+#     for voxel in lookup_table:
+#         voxel_xim, voxel_yim = voxel[4:]  # Assuming the first 3 elements are the voxel coordinates
+#         visibility_count = 0
         
-        # Cam id and mask as a dictionary in case we want to use more than 1 frame of each camera in the future
-        for cam_id, mask in masks.items():
-            if is_voxel_visible_in_camera(voxel_xim, voxel_yim, mask):
-                visibility_count += 1
+#         # Cam id and mask as a dictionary in case we want to use more than 1 frame of each camera in the future
+#         for cam_id, mask in masks.items():
+#             if is_voxel_visible_in_camera(voxel_xim, voxel_yim, mask):
+#                 visibility_count += 1
 
-        # Mark the voxel as "on" if visible in at least 3 out of 4 cameras
-        if visibility_count >= 3:
-            reconstructed_voxels.append(voxel[:3])
+#         # Mark the voxel as "on" if visible in at least 3 out of 4 cameras
+#         if visibility_count >= 3:
+#             reconstructed_voxels.append(voxel[:3])
 
-    return reconstructed_voxels
+#     return reconstructed_voxels
 
 def main():
     

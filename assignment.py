@@ -55,13 +55,23 @@ def set_voxel_positions(width, height, depth):
     voxel_lookup_table = vc.create_lookup_table(voxel_volume_bounds, resolution, camera_configs)
     masks = vc.load_foreground_masks()
 
-    reconstructed_voxels = vc.perform_voxel_reconstruction(voxel_lookup_table, masks)
-
     data, colors = [], []
-    for voxel in reconstructed_voxels:
-        x, y, z = voxel
-        data.append([x*block_size - width/2, y*block_size, z*block_size - depth/2])
-        colors.append([x / width, z / depth, y / height])
+
+    # Doing the voxel reconstruction here to save looping through the voxels twice
+    for voxel in voxel_lookup_table:
+        voxel_xim, voxel_yim = voxel[4:]  # Assuming the first 3 elements are the voxel coordinates
+        visibility_count = 0
+        
+        # Cam id and mask as a dictionary in case we want to use more than 1 frame of each camera in the future
+        for cam_id, mask in masks.items():
+            if vc.is_voxel_visible_in_camera(voxel_xim, voxel_yim, mask):
+                visibility_count += 1
+
+        # Mark the voxel as "on" if visible in at least 3 out of 4 cameras
+        if visibility_count >= 3:
+            data.append([voxel[4]*block_size - width/2, voxel[5]*block_size, voxel[6]*block_size - depth/2])
+            colors.append([voxel[4] / width, voxel[6] / depth, voxel[5] / height])
+
     return data, colors
 
 def get_cam_positions():
