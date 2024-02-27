@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 import cv2
 import VoxelConstruction as vc
 
-block_size = 1.0
+block_size = 1
 
 camera_configs = [
         "data/cam1/config.xml",
@@ -45,34 +45,52 @@ def generate_grid(width, depth):
 
 def set_voxel_positions(width, height, depth):
 
-    voxel_volume_bounds = [
-    (-width/2 * block_size, width/2 * block_size),  # X-axis bounds
-    (-block_size, height * block_size),  # Y-axis bounds
-    (-depth/2 * block_size, depth/2 * block_size)  # Z-axis bounds
-    ]
-    resolution = 1
+    x_range = np.linspace(-600, 900, num=100)
+    y_range = np.linspace(-800, 800, num=100)
+    z_range = np.linspace(-2000, 600, num=100)
+    voxel_volume = np.array(np.meshgrid(x_range, y_range, z_range)).T.reshape(-1, 3)
 
-    voxel_lookup_table = vc.create_lookup_table(voxel_volume_bounds, resolution, camera_configs)
+    lookup_table = []
+
+    # Load camera configurations and foreground masks
+    camera_configs = ["data/cam1/config.xml", "data/cam2/config.xml", "data/cam3/config.xml", "data/cam4/config.xml"]
     masks = vc.load_foreground_masks()
 
-    data, colors = [], []
+    for c, config_path in enumerate(camera_configs, start=1):
+        camera_matrix, dist_coeffs, rvec, tvec = vc.load_camera_parameters(config_path)
+        # voxel_3d = np.array([[voxel[0], voxel[1], voxel[2]]], dtype=np.float32)
+        img_points, _ = cv2.projectPoints(voxel_volume, rvec, tvec, camera_matrix, dist_coeffs)
+        # x_im, y_im = img_points[0][0]  # Extract image coordinates
 
-    # Doing the voxel reconstruction here to save looping through the voxels twice
-    for voxel in voxel_lookup_table:
-        voxel_xim, voxel_yim = voxel[4:]
-        visibility_count = 0
-        
-        # Cam id and mask as a dictionary in case we want to use more than 1 frame of each camera in the future
-        for cam_id, mask in masks.items():
-            if vc.is_voxel_visible_in_camera(voxel_xim, voxel_yim, mask):
-                visibility_count += 1
+        # lookup_table.append((tuple(voxel), c, (x_im, y_im)))
+        for voxel, img_point in zip(voxel_volume, img_points):
+            x_im, y_im = img_point[0]  # Extract image coordinates
+            lookup_table.append((tuple(map(int, voxel)), c, (x_im, y_im)))
 
-        # Mark the voxel as "on" if visible in at least 3 out of 4 cameras
-        if visibility_count >= 2:
-            data.append([voxel[0]*block_size, voxel[1]*block_size, voxel[2]*block_size])
-            # data.append([voxel[0]*block_size - width/2, voxel[1]*block_size, voxel[2]*block_size - depth/2])
-            # colors.append([voxel[0] / width, voxel[2] / depth, voxel[1] / height])
-            colors.append([1.0, 1.0, 1.0])
+    # Voxel reconstruction
+    data = []
+    colors = []
+    foreground_threshold = 3  # Number of cameras that need to see the voxel as foreground
+
+     # Voxel reconstruction based on the lookup table
+    voxel_visibility = {}  # Tracks the number of cameras that see each voxel as foreground
+    for voxel, camera_id, (x_im, y_im) in lookup_table:
+        if 0 <= x_im < masks[camera_id].shape[1] and 0 <= y_im < masks[camera_id].shape[0]:  # Check image boundaries
+            if masks[camera_id][int(y_im), int(x_im)] > 0:  # Foreground check
+                voxel_visibility[voxel] = voxel_visibility.get(voxel, 0) + 1
+
+    scale_x = 128 / (900 + 600)  # Adjust based on actual desired range and real range
+    scale_y = 64 / (800 + 800)   # Same here
+    scale_z = 128 / (2000 + 600) # And here
+
+    # Collect voxels that meet the visibility threshold
+    for voxel, count in voxel_visibility.items():
+        if count >= foreground_threshold:
+            scaled_x = (voxel[0] + 600) * scale_x - width / 2  # Recenter after scaling
+            scaled_y = (voxel[1] + 800) * scale_y - height / 2  # Adjust centering as needed
+            scaled_z = (voxel[2] + 2000) * scale_z - depth / 2  # Adjust centering as needed
+            data.append([scaled_x, scaled_y, scaled_z])
+            colors.append((1.0, 1.0, 1.0))  # Assign a white color for visible voxels
 
     return data, colors
 
