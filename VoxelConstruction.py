@@ -95,7 +95,7 @@ def perform_voxel_reconstruction(lookup_table, masks):
                         voxel_visibility[voxel_coords] += 1 # Increment visibility count
 
     # Reconstruct the list of voxels visible in at least one camera view
-    reconstructed_voxels = [coords for coords, visibility_count in voxel_visibility.items() if visibility_count > 3]
+    reconstructed_voxels = [coords for coords, visibility_count in voxel_visibility.items() if visibility_count > 4]
 
     return reconstructed_voxels
 
@@ -108,9 +108,9 @@ def newmethod_lookup(width, height, depth, block_size):
     # # Its a 3D grid so we need to flatten it to a 2D grid where a row is (number of voxel 0 - 1048576, 3)
     # voxel_volume = np.vstack([x.ravel(), y.ravel(), z.ravel()]).T 
 
-    x_range = np.linspace(-600, 900, num=100)
-    y_range = np.linspace(-800, 800, num=100)
-    z_range = np.linspace(-2000, 600, num=100)
+    x_range = np.linspace(-512, 1024, num=100)
+    y_range = np.linspace(-1024, 1024, num=100)
+    z_range = np.linspace(-2048, 512, num=100)
     voxel_volume = np.array(np.meshgrid(x_range, y_range, z_range)).T.reshape(-1, 3)
 
     print(voxel_volume.shape)

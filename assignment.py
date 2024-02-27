@@ -45,9 +45,9 @@ def generate_grid(width, depth):
 
 def set_voxel_positions(width, height, depth):
 
-    x_range = np.linspace(-600, 900, num=100)
-    y_range = np.linspace(-800, 800, num=100)
-    z_range = np.linspace(-2000, 600, num=100)
+    x_range = np.linspace(-512, 1024, num=100)
+    y_range = np.linspace(-1024, 1024, num=100)
+    z_range = np.linspace(-2048, 512, num=100)
     voxel_volume = np.array(np.meshgrid(x_range, y_range, z_range)).T.reshape(-1, 3)
 
     lookup_table = []
@@ -79,16 +79,14 @@ def set_voxel_positions(width, height, depth):
             if masks[camera_id][int(y_im), int(x_im)] > 0:  # Foreground check
                 voxel_visibility[voxel] = voxel_visibility.get(voxel, 0) + 1
 
-    scale_x = 128 / (900 + 600)  # Adjust based on actual desired range and real range
-    scale_y = 64 / (800 + 800)   # Same here
-    scale_z = 128 / (2000 + 600) # And here
+    simple_scale = 64
 
     # Collect voxels that meet the visibility threshold
     for voxel, count in voxel_visibility.items():
         if count >= foreground_threshold:
-            scaled_x = (voxel[0] + 600) * scale_x - width / 2  # Recenter after scaling
-            scaled_y = (voxel[1] + 800) * scale_y - height / 2  # Adjust centering as needed
-            scaled_z = (voxel[2] + 2000) * scale_z - depth / 2  # Adjust centering as needed
+            scaled_x = voxel[0] / simple_scale   # Recenter after scaling
+            scaled_y = - (voxel[2] / simple_scale )  # Adjust centering as needed
+            scaled_z = voxel[1] / simple_scale  # Adjust centering as needed
             data.append([scaled_x, scaled_y, scaled_z])
             colors.append((1.0, 1.0, 1.0))  # Assign a white color for visible voxels
 
