@@ -1,9 +1,9 @@
 import cv2
 import numpy as np
 
+## USED FOR DEBUG ##
+
 def load_camera_parameters(camera_config_path):
-    # OpenCV's cv2.FileStorage for reading might have limitations in Python.
-    # Consider using an XML parser for robustness.
     fs = cv2.FileStorage(camera_config_path, cv2.FILE_STORAGE_READ)
     camera_matrix = fs.getNode("CameraMatrix").mat()
     dist_coeffs = fs.getNode("DistortionCoeffs").mat()
@@ -12,6 +12,7 @@ def load_camera_parameters(camera_config_path):
     fs.release()
     return camera_matrix, dist_coeffs, rvec, tvec
 
+# Not used
 def create_lookup_table(voxel_volume_bounds, resolution, camera_configs):
     xv, yv, zv = np.mgrid[
         voxel_volume_bounds[0][0]:voxel_volume_bounds[0][1]:resolution,
@@ -28,7 +29,7 @@ def create_lookup_table(voxel_volume_bounds, resolution, camera_configs):
         img_points, _ = cv2.projectPoints(voxel_points, rvec, tvec, camera_matrix, dist_coeffs)
 
         for voxel, img_point in zip(voxel_points, img_points):
-            xim, yim = img_point.ravel()  # Extract projected x, y coordinates
+            xim, yim = img_point.ravel()  
             # Project points returns the xim yim as floats so we round them to integers
             xim_int = int(round(xim))
             yim_int = int(round(yim))
@@ -50,26 +51,7 @@ def is_voxel_visible_in_camera(voxel_xim, voxel_yim, mask):
         return mask[int(voxel_yim), int(voxel_xim)] == 255
     return False
 
-# Search by voxel
-# def perform_voxel_reconstruction(lookup_table, masks):
-#     reconstructed_voxels = []
-
-#     for voxel in lookup_table:
-#         voxel_xim, voxel_yim = voxel[4:]  # Assuming the first 3 elements are the voxel coordinates
-#         visibility_count = 0
-        
-#         # Cam id and mask as a dictionary in case we want to use more than 1 frame of each camera in the future
-#         for cam_id, mask in masks.items():
-#             if is_voxel_visible_in_camera(voxel_xim, voxel_yim, mask):
-#                 visibility_count += 1
-
-#         # Mark the voxel as "on" if visible in at least 3 out of 4 cameras
-#         if visibility_count >= 2:
-#             reconstructed_voxels.append(voxel[:3])
-
-#     return reconstructed_voxels
-
-# Search by camera
+# Search by camera - Not Used
 def perform_voxel_reconstruction(lookup_table, masks):
     # Initialize a dictionary to hold the visibility status of each voxel
     # Keys are voxel coordinates as a tuple (x, y, z), values are counts of how many views the voxel is visible in

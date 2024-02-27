@@ -3,7 +3,6 @@ import random
 import numpy as np
 import xml.etree.ElementTree as ET
 import cv2
-import VoxelConstruction as vc
 
 block_size = 1
 
@@ -13,6 +12,22 @@ camera_configs = [
         "data/cam3/config.xml",
         "data/cam4/config.xml"
     ]
+
+def load_camera_parameters(camera_config_path):
+    fs = cv2.FileStorage(camera_config_path, cv2.FILE_STORAGE_READ)
+    camera_matrix = fs.getNode("CameraMatrix").mat()
+    dist_coeffs = fs.getNode("DistortionCoeffs").mat()
+    rvec = fs.getNode("RotationVectors").mat()
+    tvec = fs.getNode("TranslationVectors").mat()
+    fs.release()
+    return camera_matrix, dist_coeffs, rvec, tvec
+
+def load_foreground_masks():
+    masks = {}
+    for cam_id in range(1, 5):  # Assuming you have 4 cameras
+        mask_path = f"data/cam{cam_id}/voxel_construction_frame.jpg"
+        masks[cam_id] = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+    return masks
 
 def load_rotation_matrix_from_xml(config_path):
     # Parse the XML to get the rotation matrix
@@ -45,53 +60,62 @@ def generate_grid(width, depth):
 
 def set_voxel_positions(width, height, depth):
 
+    # Used hardcoded values instead of the input parameters
+    # These numbers seem to capture almost all of the 2D image dimentions (486x644)
     x_range = np.linspace(-512, 1024, num=100)
     y_range = np.linspace(-1024, 1024, num=100)
     z_range = np.linspace(-2048, 512, num=100)
     voxel_volume = np.array(np.meshgrid(x_range, y_range, z_range)).T.reshape(-1, 3)
 
+    ##### Look up table #####
     lookup_table = []
 
     # Load camera configurations and foreground masks
     camera_configs = ["data/cam1/config.xml", "data/cam2/config.xml", "data/cam3/config.xml", "data/cam4/config.xml"]
-    masks = vc.load_foreground_masks()
+    masks = load_foreground_masks()
 
+    # We can give the voxel volume and get back a list of the image points
     for c, config_path in enumerate(camera_configs, start=1):
-        camera_matrix, dist_coeffs, rvec, tvec = vc.load_camera_parameters(config_path)
-        # voxel_3d = np.array([[voxel[0], voxel[1], voxel[2]]], dtype=np.float32)
-        img_points, _ = cv2.projectPoints(voxel_volume, rvec, tvec, camera_matrix, dist_coeffs)
-        # x_im, y_im = img_points[0][0]  # Extract image coordinates
 
-        # lookup_table.append((tuple(voxel), c, (x_im, y_im)))
+        camera_matrix, dist_coeffs, rvec, tvec = load_camera_parameters(config_path)
+        img_points, _ = cv2.projectPoints(voxel_volume, rvec, tvec, camera_matrix, dist_coeffs)
+
+        # Align the voxel and camera points and append to the lookup table
+        # Make voxels to integers
         for voxel, img_point in zip(voxel_volume, img_points):
             x_im, y_im = img_point[0]  # Extract image coordinates
             lookup_table.append((tuple(map(int, voxel)), c, (x_im, y_im)))
 
-    # Voxel reconstruction
+    ##### Voxel reconstruction #####
     data = []
     colors = []
-    foreground_threshold = 4  # Number of cameras that need to see the voxel as foreground
+    # Number of cameras that need to see the voxel as foreground
+    foreground_threshold = 4
 
-     # Voxel reconstruction based on the lookup table
-    voxel_visibility = {}  # Tracks the number of cameras that see each voxel as foreground
+    # Tracks the number of cameras that see each voxel as foreground
+    voxel_visibility = {}
     for voxel, camera_id, (x_im, y_im) in lookup_table:
-        if 0 <= x_im < masks[camera_id].shape[1] and 0 <= y_im < masks[camera_id].shape[0]:  # Check image boundaries
-            if masks[camera_id][int(y_im), int(x_im)] > 0:  # Foreground check
+        # Check image boundaries
+        if 0 <= x_im < masks[camera_id].shape[1] and 0 <= y_im < masks[camera_id].shape[0]:
+            # If that 2D pixel is foreground then increment the voxel visibility
+            if masks[camera_id][int(y_im), int(x_im)] > 0:  
                 voxel_visibility[voxel] = voxel_visibility.get(voxel, 0) + 1
 
+    # Scale the voxel positions to fit the 128x64x128 grid
     simple_scale = 64
 
     # Collect voxels that meet the visibility threshold
     for voxel, count in voxel_visibility.items():
         if count >= foreground_threshold:
-            scaled_x = voxel[0] / simple_scale   # Recenter after scaling
-            scaled_y = - (voxel[2] / simple_scale )  # Adjust centering as needed
-            scaled_z = voxel[1] / simple_scale  # Adjust centering as needed
+            scaled_x = voxel[0] / simple_scale
+            scaled_y = - (voxel[2] / simple_scale )
+            scaled_z = voxel[1] / simple_scale
             data.append([scaled_x, scaled_y, scaled_z])
             colors.append((1.0, 1.0, 1.0))  # Assign a white color for visible voxels
 
     return data, colors
 
+# Not finished
 def get_cam_positions():
     # Generates dummy camera locations at the 4 corners of the room
     # TODO: You need to input the estimated locations of the 4 cameras in the world coordinates.
@@ -106,6 +130,7 @@ def get_cam_positions():
 
     return cam_positions, [[1.0, 0, 0], [0, 1.0, 0], [0, 0, 1.0], [1.0, 1.0, 0]]
 
+# Not finished
 def get_cam_rotation_matrices():
     # Generates dummy camera rotation matrices, looking down 45 degrees towards the center of the room
     # TODO: You need to input the estimated camera rotation matrices (4x4) of the 4 cameras in the world coordinates.

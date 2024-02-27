@@ -25,6 +25,7 @@ def save_first_frame():
     # Release the video capture object
     cap.release()
 
+# Used to get our background model
 def create_background_model_gmm(video_path):
     cap = cv2.VideoCapture(video_path)
     fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=16, detectShadows=False)
@@ -42,6 +43,7 @@ def create_background_model_gmm(video_path):
     cap.release()
     return background_model
 
+# Automatically find the optimal thresholds for the HSV channels upper bounds
 def find_optimal_upper_thresholds(frame_hsv, manual_segmentation):
     best_score = float('inf')
     best_upper_thresholds = None
@@ -71,6 +73,7 @@ def find_optimal_upper_thresholds(frame_hsv, manual_segmentation):
 
     return best_upper_thresholds
 
+# Automatically find the optimal thresholds for the HSV channels lower bounds
 def find_optimal_lower_thresholds(frame_hsv, manual_segmentation):
     best_score = float('inf')
     best_thresholds = None
@@ -94,7 +97,8 @@ def find_optimal_lower_thresholds(frame_hsv, manual_segmentation):
 
     return best_thresholds
 
-def process_video(video_path, background_model_gmm):
+# Process the video to extract the foreground mask - We save only the first frame
+def process_video(video_path, background_model_gmm, save_manual_segmentation=False, save_voxel_construction_frame=False):
 
     # Background is already grayscale but with 3 channels so we just make it back to 1 channel
     background_model_gmm = cv2.cvtColor(background_model_gmm, cv2.COLOR_BGR2GRAY)
@@ -137,24 +141,25 @@ def process_video(video_path, background_model_gmm):
         # Combining the masks - example using logical AND to combine thresholds
         combined_mask = cv2.bitwise_and(mask_hue, cv2.bitwise_and(mask_sat, mask_val))
 
-        #kernel1 = np.ones((4, 4), np.uint8)
+        # kernel1 = np.ones((4, 4), np.uint8)
         kernel2 = np.ones((6, 6), np.uint8)
 
-        # Erode and then dilate, known as opening. Good for removing noise.
+        # Removing noise.
         # combined_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_OPEN, kernel1)
 
-        # Dilate and then erode, known as closing. Good for closing small holes.
+        # Closing small holes.
         combined_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_CLOSE, kernel2)
 
-        # if is_first_frame:
-        #     # Save the first frame for manual segmentation
-        #     cv2.imwrite("data/cam4/combined_mask4.jpg", combined_mask)
-        #     is_first_frame = False
+        if is_first_frame:
+            if save_manual_segmentation:
+                # Save the first frame for manual segmentation
+                cv2.imwrite("data/cam4/combined_mask4.jpg", combined_mask)
 
-        # if is_first_frame:
-        #     # Save the frame for use in voxel construction
-        #     cv2.imwrite("data/cam3/voxel_construction_frame.jpg", combined_mask) 
-        #     is_first_frame = False
+            if save_voxel_construction_frame:
+                # Save the first frame for use in voxel construction
+                cv2.imwrite("data/cam3/voxel_construction_frame.jpg", combined_mask) 
+                
+            is_first_frame = False
 
         # Display or process the combined_mask as needed
         cv2.imshow('Foreground Mask', combined_mask)
@@ -192,7 +197,7 @@ def main():
     process_video_path4 = "data/cam4/video.avi"
     background_model_gmm4 = cv2.imread("data/cam4/background_model_gmm.jpg")
 
-    process_video(process_video_path1, background_model_gmm1)
+    process_video(process_video_path1, background_model_gmm1, save_manual_segmentation=False, save_voxel_construction_frame=False)
 
     # Used to save the frame for extracting manual segmentation mask
     # save_first_frame()
