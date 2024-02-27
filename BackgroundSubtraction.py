@@ -151,10 +151,10 @@ def process_video(video_path, background_model_gmm):
         #     cv2.imwrite("data/cam4/combined_mask4.jpg", combined_mask)
         #     is_first_frame = False
 
-        if is_first_frame:
-            # Save the frame for use in voxel construction
-            cv2.imwrite("data/cam3/voxel_construction_frame.jpg", combined_mask) 
-            is_first_frame = False
+        # if is_first_frame:
+        #     # Save the frame for use in voxel construction
+        #     cv2.imwrite("data/cam3/voxel_construction_frame.jpg", combined_mask) 
+        #     is_first_frame = False
 
         # Display or process the combined_mask as needed
         cv2.imshow('Foreground Mask', combined_mask)
@@ -172,8 +172,8 @@ def main():
 
     # cv2.imwrite("data/cam4/background_model_gmm.jpg", background_model_gmm)
 
-    manual_segmentation_mask = cv2.imread("data/cam4/first_frame4_copy.jpg", cv2.IMREAD_GRAYSCALE)
-    combined_foreground_mask = cv2.imread("data/cam4/combined_mask4.jpg", cv2.IMREAD_GRAYSCALE)
+    manual_segmentation_mask = cv2.imread("data/cam1/first_frame4_copy.jpg", cv2.IMREAD_GRAYSCALE)
+    combined_foreground_mask = cv2.imread("data/cam1/combined_mask4.jpg", cv2.IMREAD_GRAYSCALE)
 
     # Find the optimal thresholds for the HSV channels
     # optimal_lower_thresholds = find_optimal_lower_thresholds(combined_foreground_mask, manual_segmentation_mask)
@@ -192,7 +192,7 @@ def main():
     process_video_path4 = "data/cam4/video.avi"
     background_model_gmm4 = cv2.imread("data/cam4/background_model_gmm.jpg")
 
-    process_video(process_video_path3, background_model_gmm3)
+    process_video(process_video_path1, background_model_gmm1)
 
     # Used to save the frame for extracting manual segmentation mask
     # save_first_frame()

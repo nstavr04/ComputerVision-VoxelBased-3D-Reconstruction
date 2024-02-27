@@ -70,7 +70,7 @@ def set_voxel_positions(width, height, depth):
     # Voxel reconstruction
     data = []
     colors = []
-    foreground_threshold = 3  # Number of cameras that need to see the voxel as foreground
+    foreground_threshold = 4  # Number of cameras that need to see the voxel as foreground
 
      # Voxel reconstruction based on the lookup table
     voxel_visibility = {}  # Tracks the number of cameras that see each voxel as foreground
