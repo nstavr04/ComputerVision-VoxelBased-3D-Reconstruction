@@ -22,9 +22,17 @@ def load_camera_parameters(camera_config_path):
     fs.release()
     return camera_matrix, dist_coeffs, rvec, tvec
 
+# Load original camera images for coloring the voxels
+def load_camera_images():
+    images = {}
+    for cam_id in range(1, 5):
+        image_path = f"data/cam{cam_id}/first_frame.jpg"
+        images[cam_id] = cv2.imread(image_path, cv2.IMREAD_COLOR)
+    return images
+
 def load_foreground_masks():
     masks = {}
-    for cam_id in range(1, 5):  # Assuming you have 4 cameras
+    for cam_id in range(1, 5):
         mask_path = f"data/cam{cam_id}/voxel_construction_frame.jpg"
         masks[cam_id] = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
     return masks
@@ -73,6 +81,7 @@ def set_voxel_positions(width, height, depth):
     # Load camera configurations and foreground masks
     camera_configs = ["data/cam1/config.xml", "data/cam2/config.xml", "data/cam3/config.xml", "data/cam4/config.xml"]
     masks = load_foreground_masks()
+    colored_rgb_images = load_camera_images()
 
     # We can give the voxel volume and get back a list of the image points
     for c, config_path in enumerate(camera_configs, start=1):
@@ -94,6 +103,10 @@ def set_voxel_positions(width, height, depth):
 
     # Tracks the number of cameras that see each voxel as foreground
     voxel_visibility = {}
+
+    # Store the cumulative colors and count for averaging
+    voxel_colors = {}
+
     for voxel, camera_id, (x_im, y_im) in lookup_table:
         # Check image boundaries
         if 0 <= x_im < masks[camera_id].shape[1] and 0 <= y_im < masks[camera_id].shape[0]:
@@ -101,17 +114,36 @@ def set_voxel_positions(width, height, depth):
             if masks[camera_id][int(y_im), int(x_im)] > 0:  
                 voxel_visibility[voxel] = voxel_visibility.get(voxel, 0) + 1
 
+                if camera_id == 1:
+                    # Extract color from the camera image
+                    color = colored_rgb_images[camera_id][int(y_im), int(x_im), :]
+                    if voxel not in voxel_colors:
+                        voxel_colors[voxel] = (np.array(color), 1)  # Store color and a count
+                    else:
+                        # Redundant currently but could be used to average colors in future
+                        # Accumulate colors and increment count
+                        voxel_colors[voxel] = (voxel_colors[voxel][0] + np.array(color), voxel_colors[voxel][1] + 1)
+
     # Scale the voxel positions to fit the 128x64x128 grid
     simple_scale = 64
 
     # Collect voxels that meet the visibility threshold
     for voxel, count in voxel_visibility.items():
         if count >= foreground_threshold:
+
             scaled_x = voxel[0] / simple_scale
             scaled_y = - (voxel[2] / simple_scale )
             scaled_z = voxel[1] / simple_scale
             data.append([scaled_x, scaled_y, scaled_z])
-            colors.append((1.0, 1.0, 1.0))  # Assign a white color for visible voxels
+            
+            # Calculate average color
+            if voxel in voxel_colors:
+                avg_color = voxel_colors[voxel][0] / voxel_colors[voxel][1]
+                # Without this, color is white
+                avg_color = avg_color[::-1] / 255.0  
+                colors.append(avg_color)
+            else:
+                colors.append((1.0, 1.0, 1.0))
 
     return data, colors
 

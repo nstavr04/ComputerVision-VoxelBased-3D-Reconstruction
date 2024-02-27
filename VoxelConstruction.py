@@ -3,6 +3,13 @@ import numpy as np
 
 ## USED FOR DEBUG ##
 
+def load_camera_images():
+    images = {}
+    for cam_id in range(1, 5):
+        image_path = f"data/cam{cam_id}/first_frame.jpg"
+        images[cam_id] = cv2.imread(image_path, cv2.IMREAD_COLOR)
+    return images
+
 def load_camera_parameters(camera_config_path):
     fs = cv2.FileStorage(camera_config_path, cv2.FILE_STORAGE_READ)
     camera_matrix = fs.getNode("CameraMatrix").mat()
@@ -157,6 +164,85 @@ def newmethod_lookup(width, height, depth, block_size):
 
     return data, colors
 
+def set_voxel_positions(width, height, depth):
+
+    # Used hardcoded values instead of the input parameters
+    # These numbers seem to capture almost all of the 2D image dimentions (486x644)
+    x_range = np.linspace(-512, 1024, num=100)
+    y_range = np.linspace(-1024, 1024, num=100)
+    z_range = np.linspace(-2048, 512, num=100)
+    voxel_volume = np.array(np.meshgrid(x_range, y_range, z_range)).T.reshape(-1, 3)
+
+    ##### Look up table #####
+    lookup_table = []
+
+    # Load camera configurations and foreground masks
+    camera_configs = ["data/cam1/config.xml", "data/cam2/config.xml", "data/cam3/config.xml", "data/cam4/config.xml"]
+    masks = load_foreground_masks()
+    colored_rgb_images = load_camera_images()
+
+    # We can give the voxel volume and get back a list of the image points
+    for c, config_path in enumerate(camera_configs, start=1):
+
+        camera_matrix, dist_coeffs, rvec, tvec = load_camera_parameters(config_path)
+        img_points, _ = cv2.projectPoints(voxel_volume, rvec, tvec, camera_matrix, dist_coeffs)
+
+        # Align the voxel and camera points and append to the lookup table
+        # Make voxels to integers
+        for voxel, img_point in zip(voxel_volume, img_points):
+            x_im, y_im = img_point[0]  # Extract image coordinates
+            lookup_table.append((tuple(map(int, voxel)), c, (x_im, y_im)))
+
+    ##### Voxel reconstruction #####
+    data = []
+    colors = []
+    # Number of cameras that need to see the voxel as foreground
+    foreground_threshold = 4
+
+    # Tracks the number of cameras that see each voxel as foreground
+    voxel_visibility = {}
+
+    # Store the cumulative colors and count for averaging
+    voxel_colors = {}
+
+    for voxel, camera_id, (x_im, y_im) in lookup_table:
+        # Check image boundaries
+        if 0 <= x_im < masks[camera_id].shape[1] and 0 <= y_im < masks[camera_id].shape[0]:
+            # If that 2D pixel is foreground then increment the voxel visibility
+            if masks[camera_id][int(y_im), int(x_im)] > 0:  
+                voxel_visibility[voxel] = voxel_visibility.get(voxel, 0) + 1
+
+                # Extract color from the camera image
+                color = colored_rgb_images[camera_id][int(y_im), int(x_im), :]
+                if voxel not in voxel_colors:
+                    voxel_colors[voxel] = (np.array(color), 1)  # Store color and a count
+                else:
+                    # Accumulate colors and increment count
+                    voxel_colors[voxel] = (voxel_colors[voxel][0], voxel_colors[voxel][1] + 1)
+
+    # Scale the voxel positions to fit the 128x64x128 grid
+    simple_scale = 64
+
+    # Collect voxels that meet the visibility threshold
+    for voxel, count in voxel_visibility.items():
+        if count >= foreground_threshold:
+
+            scaled_x = voxel[0] / simple_scale
+            scaled_y = - (voxel[2] / simple_scale )
+            scaled_z = voxel[1] / simple_scale
+            data.append([scaled_x, scaled_y, scaled_z])
+            
+            # Calculate average color
+            if voxel in voxel_colors:
+                #avg_color = voxel_colors[voxel][0] / voxel_colors[voxel][1]
+                # Convert color from BGR to RGB (as OpenCV uses BGR) if displaying in a system that uses RGB
+                #avg_color = avg_color[::-1] / 255.0  # Normalize if necessary for your visualization tool
+                colors.append(tuple(voxel_colors[voxel]))
+            else:
+                colors.append((1.0, 1.0, 1.0))
+
+    return data, colors
+
 def main():
     
     world_width = 500
@@ -179,6 +265,8 @@ def main():
     masks = load_foreground_masks()
     print(masks[1].shape)
 
+    data, colors = set_voxel_positions(world_width, world_height, world_depth)
+
     # print(len(voxel_lookup_table))
     # print(masks[1].shape)
     # print([item[-2:] for item in voxel_lookup_table[0:10]])
@@ -195,11 +283,11 @@ def main():
 
     
 
-    data, colors = lookup_table = newmethod_lookup(world_width, world_height, world_depth, block_size)
-    # data = perform_voxel_reconstruction(lookup_table, masks)
+    # data, colors = lookup_table = newmethod_lookup(world_width, world_height, world_depth, block_size)
+    # # data = perform_voxel_reconstruction(lookup_table, masks)
 
-    print("Number of reconstructed voxels:", len(data))
-    print("First 10 reconstructed voxels:", data[:10])
+    # print("Number of reconstructed voxels:", len(data))
+    # print("First 10 reconstructed voxels:", data[:10])
     
 
 if __name__ == "__main__":
