@@ -172,6 +172,14 @@ def process_video(video_path, background_model_gmm, output_subfolder, save_manua
     cv2.destroyAllWindows()
 
 def main():
+    # Find the optimal thresholds for the HSV channels
+    # manual_segmentation_mask = cv2.imread("data/cam1/first_frame4_copy.jpg", cv2.IMREAD_GRAYSCALE)
+    # combined_foreground_mask = cv2.imread("data/cam1/combined_mask4.jpg", cv2.IMREAD_GRAYSCALE)
+    
+    # optimal_lower_thresholds = find_optimal_lower_thresholds(combined_foreground_mask, manual_segmentation_mask)
+    # optimal_upper_thresholds = find_optimal_upper_thresholds(combined_foreground_mask, manual_segmentation_mask)
+    # print("Optimal thresholds:", optimal_lower_thresholds, "  ", optimal_upper_thresholds)
+    
     camera_tasks = [
         ("data/cam1/video.avi", "data/cam1/background_model_gmm.jpg", "output/cam1"),
         ("data/cam2/video.avi", "data/cam2/background_model_gmm.jpg", "output/cam2"),
