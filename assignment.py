@@ -147,67 +147,25 @@ def set_voxel_positions(width, height, depth):
 
     return data, colors
 
-# Not finished
 def get_cam_positions():
-    # Generates dummy camera locations at the 4 corners of the room
-    # TODO: You need to input the estimated locations of the 4 cameras in the world coordinates.
-    
-    cam_positions = []
-    for config_path in camera_configs:
-        rotation_matrix = load_rotation_matrix_from_xml(config_path)
-        translation_vector = load_translation_from_xml(config_path)
-        position_vector = -np.matrix(rotation_matrix).T * np.matrix(translation_vector).T
+    def process_camera(camera_id):
+        config_path = f"data/cam{camera_id}/config.xml"
+        _, _, rvec, tvec = load_camera_parameters(config_path)
+        rmtx, _ = cv2.Rodrigues(rvec)
+        position = np.dot(-rmtx.T, np.array(tvec).reshape(-1, 1))
+        return np.array([position[0, 0], abs(position[2, 0]), position[1, 0]]) / 10
 
-        cam_positions.append([position_vector[0], -position_vector[2], position_vector[1]])
+    return [process_camera(camera_id) for camera_id in range(1, 5)], np.eye(3).tolist() + [[1.0, 1.0, 0]]
 
-    return cam_positions, [[1.0, 0, 0], [0, 1.0, 0], [0, 0, 1.0], [1.0, 1.0, 0]]
-
-# Not finished
 def get_cam_rotation_matrices():
-    # Generates dummy camera rotation matrices, looking down 45 degrees towards the center of the room
-    # TODO: You need to input the estimated camera rotation matrices (4x4) of the 4 cameras in the world coordinates.
-
-   
-    # cam_angles = [[0, 45, -45], [0, 135, -45], [0, 225, -45], [0, 315, -45]]
-    # cam_rotations = [glm.mat4(1), glm.mat4(1), glm.mat4(1), glm.mat4(1)]
-    # for c in range(len(cam_rotations)):
-    #     cam_rotations[c] = glm.rotate(cam_rotations[c], cam_angles[c][0] * np.pi / 180, [1, 0, 0])
-    #     cam_rotations[c] = glm.rotate(cam_rotations[c], cam_angles[c][1] * np.pi / 180, [0, 1, 0])
-    #     cam_rotations[c] = glm.rotate(cam_rotations[c], cam_angles[c][2] * np.pi / 180, [0, 0, 1])
-    # return cam_rotations
-
     cam_rotations = []
-    for config_path in camera_configs:
-        R_mat = load_rotation_matrix_from_xml(config_path)
-        
-        # Convert the numpy rotation matrix to a glm matrix
-    #     glm_rotation_matrix = glm.mat4(
-    #         rotation_matrix[0,0], rotation_matrix[0,1], rotation_matrix[0,2], 0,
-    #         rotation_matrix[1,0], rotation_matrix[1,1], rotation_matrix[1,2], 0,
-    #         rotation_matrix[2,0], rotation_matrix[2,1], rotation_matrix[2,2], 0,
-    #         0, 0, 0, 1
-    #     )
-        
-    #     cam_rotations.append(glm_rotation_matrix)
-    
-    # return cam_rotations
-        
-     # Convert to OpenGL coordinate system
-        R_mat_gl = R_mat[:, [0, 2, 1]]
-        R_mat_gl[1, :] *= -1  # Invert the y-axis for OpenGL's coordinate system
-        
-        # Create a 4x4 OpenGL-compatible rotation matrix
-        gl_rot_mat = np.eye(4)
-        gl_rot_mat[:3, :3] = R_mat_gl
-
-        # Convert to glm matrix for further transformations if necessary
-        gl_rot_mat_glm = glm.mat4(*gl_rot_mat.T.ravel())
-        
-        # Adjust for any additional rotation as necessary
-        rotation_matrix_y = glm.rotate(glm.mat4(1), glm.radians(-90), glm.vec3(0, 1, 0))
-        cam_rotation = gl_rot_mat_glm * rotation_matrix_y
-        
-        cam_rotations.append(cam_rotation)
-        
+    for cam_index in range(1, 5):
+        config_path = f"data/cam{cam_index}/config.xml"
+        _, _, rotation_vector, _ = load_camera_parameters(config_path)
+        unit_matrix = np.eye(4)
+        rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
+        unit_matrix[:3, :3] = rotation_matrix
+        matrix = glm.mat4(unit_matrix)
+        matrix = glm.rotate(matrix, glm.radians(90), glm.vec3(0, 1, 1))
+        cam_rotations.append(matrix)
     return cam_rotations
-
