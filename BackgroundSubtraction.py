@@ -1,12 +1,12 @@
 import cv2
 import numpy as np
+from concurrent.futures import ThreadPoolExecutor
+import os
 
-import cv2
+def save_first_frame(camera_id):
 
-def save_first_frame():
-
-    video_path = "data/cam1/video.avi"
-    image_save_path = "data/cam1/first_frame.jpg"
+    video_path = f"data/cam{camera_id}/video.avi"
+    image_save_path = f"data/cam{camera_id}/first_frame.jpg"
 
     # Open the video file
     cap = cv2.VideoCapture(video_path)
@@ -20,7 +20,7 @@ def save_first_frame():
         print("First frame saved to:", image_save_path)
     else:
         # If no frame was read (e.g., if the video file is empty), print an error message
-        print("Failed to capture the first frame from the video.")
+        print(f"Failed to capture the first frame from the video at {video_path}.")
     
     # Release the video capture object
     cap.release()
@@ -41,6 +41,7 @@ def create_background_model_gmm(video_path):
     background_model = fgbg.getBackgroundImage()
     
     cap.release()
+
     return background_model
 
 # Automatically find the optimal thresholds for the HSV channels upper bounds
@@ -98,15 +99,17 @@ def find_optimal_lower_thresholds(frame_hsv, manual_segmentation):
     return best_thresholds
 
 # Process the video to extract the foreground mask - We save only the first frame
-def process_video(video_path, background_model_gmm, save_manual_segmentation=False, save_voxel_construction_frame=False):
-
+def process_video(video_path, background_model_gmm, output_subfolder, camera_id, save_manual_segmentation=True, save_voxel_construction_frame=True):
+    os.makedirs(output_subfolder, exist_ok=True)
+    
     # Background is already grayscale but with 3 channels so we just make it back to 1 channel
+    background_model_gmm = cv2.imread(background_model_gmm)
     background_model_gmm = cv2.cvtColor(background_model_gmm, cv2.COLOR_BGR2GRAY)
 
     cap = cv2.VideoCapture(video_path)
 
     is_first_frame = True
-
+    frame_number = 0
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
@@ -153,54 +156,55 @@ def process_video(video_path, background_model_gmm, save_manual_segmentation=Fal
         if is_first_frame:
             if save_manual_segmentation:
                 # Save the first frame for manual segmentation
-                cv2.imwrite("data/cam4/combined_mask4.jpg", combined_mask)
+                cv2.imwrite(f"data/cam{camera_id}/combined_mask{camera_id}.jpg", combined_mask)
 
             if save_voxel_construction_frame:
                 # Save the first frame for use in voxel construction
-                cv2.imwrite("data/cam3/voxel_construction_frame.jpg", combined_mask) 
-                
+                cv2.imwrite(f"data/cam{camera_id}/voxel_construction_frame.jpg", combined_mask) 
+
             is_first_frame = False
 
         # Display or process the combined_mask as needed
-        cv2.imshow('Foreground Mask', combined_mask)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+        path = os.path.join(output_subfolder, f"{frame_number}.jpg")
+        cv2.imwrite(path, combined_mask)
+        frame_number += 1
 
     cap.release()
     cv2.destroyAllWindows()
 
 def main():
 
-    # background_video_path = "data/cam1/background.avi"
+    for camera_id in range(1, 5):
 
-    # background_model_gmm = create_background_model_gmm(background_video_path)
+        # Used to save the frame for extracting manual segmentation mask
+        save_first_frame(camera_id)
 
-    # cv2.imwrite("data/cam4/background_model_gmm.jpg", background_model_gmm)
+        # Used to create the background model
+        background_video_path = f"data/cam{camera_id}/background.avi"
+        background_model_gmm = create_background_model_gmm(background_video_path)
+        cv2.imwrite(f"data/cam{camera_id}/background_model_gmm.jpg", background_model_gmm)
 
-    manual_segmentation_mask = cv2.imread("data/cam1/first_frame4_copy.jpg", cv2.IMREAD_GRAYSCALE)
-    combined_foreground_mask = cv2.imread("data/cam1/combined_mask4.jpg", cv2.IMREAD_GRAYSCALE)
+        # This whole code below needs to be run after you run the process_video function
+        # It's only used to automatically find all the optimal thresholds for the HSV channels
+        
+        # manual_segmentation_mask = cv2.imread("data/cam{camera_id}/first_frame{camera_id}_copy.jpg", cv2.IMREAD_GRAYSCALE)
+        # combined_foreground_mask = cv2.imread("data/cam{camera_id}/combined_mask{camera_id}.jpg", cv2.IMREAD_GRAYSCALE)
 
-    # Find the optimal thresholds for the HSV channels
-    # optimal_lower_thresholds = find_optimal_lower_thresholds(combined_foreground_mask, manual_segmentation_mask)
-    # optimal_upper_thresholds = find_optimal_upper_thresholds(combined_foreground_mask, manual_segmentation_mask)
-    # print("Optimal thresholds:", optimal_lower_thresholds, "  ", optimal_upper_thresholds)
+        # # Find the optimal thresholds for the HSV channels
+        # optimal_lower_thresholds = find_optimal_lower_thresholds(combined_foreground_mask, manual_segmentation_mask)
+        # optimal_upper_thresholds = find_optimal_upper_thresholds(combined_foreground_mask, manual_segmentation_mask)
+        # print("Optimal thresholds:", optimal_lower_thresholds, "  ", optimal_upper_thresholds)
 
-    process_video_path1 = "data/cam1/video.avi"
-    background_model_gmm1 = cv2.imread("data/cam1/background_model_gmm.jpg")
+        video_path = f"data/cam{camera_id}/video.avi"
+        background_model_path = f"data/cam{camera_id}/background_model_gmm.jpg"
+        output_subfolder = f"output/cam{camera_id}"
 
-    process_video_path2 = "data/cam2/video.avi"
-    background_model_gmm2 = cv2.imread("data/cam2/background_model_gmm.jpg")
+        os.makedirs(output_subfolder, exist_ok=True)
 
-    process_video_path3 = "data/cam3/video.avi"
-    background_model_gmm3 = cv2.imread("data/cam3/background_model_gmm.jpg")
-
-    process_video_path4 = "data/cam4/video.avi"
-    background_model_gmm4 = cv2.imread("data/cam4/background_model_gmm.jpg")
-
-    process_video(process_video_path1, background_model_gmm1, save_manual_segmentation=False, save_voxel_construction_frame=False)
-
-    # Used to save the frame for extracting manual segmentation mask
-    # save_first_frame()
+        # Use ThreadPoolExecutor to process each camera in parallel
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            future = executor.submit(process_video, video_path, background_model_path, output_subfolder, camera_id, True, True) 
+            future.result()
 
 if __name__ == "__main__":
     main()
