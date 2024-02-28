@@ -179,11 +179,11 @@ def main():
         ("data/cam4/video.avi", "data/cam4/background_model_gmm.jpg", "output/cam4"),
     ]
     
-    # Use ThreadPoolExecutor to process each camera in parallel
+    # ThreadPoolExecutor to process each camera in parallel
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = [executor.submit(process_video, video_path, background_model_path, output_subfolder) for video_path, background_model_path, output_subfolder in camera_tasks]
 
-        # Wait for all tasks to complete (optional, depending on further processing)
+        # Wait for all tasks to complete
         for future in futures:
             future.result()
 
